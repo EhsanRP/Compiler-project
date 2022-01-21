@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "hO6hMhzodvgY8nLCyIXhSfz3WPizScmp1jfGsfWTjyu/x8Lx5+fUlMidNAygMoAqawPn+5f9CM3s1w7Ci7I/CQ==",
+  "success": true,
+  "projectFilePath": "E:\\RiderProjects\\CompilerProject\\CompilerProject\\CompilerProject.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ehsan\\.nuget\\packages\\pidgin\\3.0.0\\pidgin.3.0.0.nupkg.sha512",
+    "C:\\Users\\ehsan\\.nuget\\packages\\system.collections.immutable\\5.0.0\\system.collections.immutable.5.0.0.nupkg.sha512",
+    "C:\\Users\\ehsan\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\5.0.0\\system.runtime.compilerservices.unsafe.5.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

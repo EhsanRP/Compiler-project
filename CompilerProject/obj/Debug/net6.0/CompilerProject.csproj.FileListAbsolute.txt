@@ -1,0 +1,17 @@
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\CompilerProject.exe
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\CompilerProject.deps.json
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\CompilerProject.runtimeconfig.json
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\CompilerProject.dll
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\ref\CompilerProject.dll
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\CompilerProject.pdb
+E:\RiderProjects\CompilerProject\CompilerProject\bin\Debug\net6.0\Pidgin.dll
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.csproj.AssemblyReference.cache
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.GeneratedMSBuildEditorConfig.editorconfig
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.AssemblyInfoInputs.cache
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.AssemblyInfo.cs
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.csproj.CoreCompileInputs.cache
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.csproj.CopyComplete
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.dll
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\ref\CompilerProject.dll
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.pdb
+E:\RiderProjects\CompilerProject\CompilerProject\obj\Debug\net6.0\CompilerProject.genruntimeconfig.cache

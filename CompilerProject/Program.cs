@@ -1,349 +1,280 @@
-﻿// See https://aka.ms/new-console-template for more information
-
+﻿using System.Collections.Immutable;
 using Pidgin;
+using Pidgin.Expression;
 using static Pidgin.Parser;
+using static Pidgin.Parser<char>;
 
 namespace Ehsan;
 
 public abstract record Node;
 
-public abstract record Kind : Node;
+public abstract record MyExpression : Node;
 
-public record IntegerKind : Kind;
+public enum KindType
+{
+    Integer,
+}
 
-public abstract record Expression : Node;
+public record Kind(KindType Type) : Node;
 
-public record Identifier(string Name) : Expression;
+public record Identifier(string Name) : MyExpression;
 
-public record IntegerLiteral(int Value) : Expression;
+public record Literal(int Value) : MyExpression;
 
-public record AddExpression(Expression Left, Expression Right) : Expression;
+public record Call(MyExpression Expression, ImmutableArray<MyExpression> Arguments) : MyExpression;
 
-public record SubtractExpression(Expression Left, Expression Right) : Expression;
+public enum UnaryOperatorType
+{
+    Increment,
+    Decrement,
+    Negate,
+    Complement
+}
 
-public record MultiplyExpression(Expression Left, Expression Right) : Expression;
+public record UnaryOperation(UnaryOperatorType Type, MyExpression Expression) : MyExpression;
 
-public record DivideExpression(Expression Left, Expression Right) : Expression;
+public enum BinaryOperatorType
+{
+    Add,
+    Subtract,
+    Mulitply,
+    Divide,
+    Modulo,
+    And,
+    Or,
+    GreaterThanEqual,
+    GreaterThan,
+    Equal,
+    LessThan,
+    LessThanEqual,
+}
 
-public record ModuloExpression(Expression Left, Expression Right) : Expression;
-
-public record GreaterThanEqualExpression(Expression Left, Expression Right) : Expression;
-
-public record GreaterThanExpression(Expression Left, Expression Right) : Expression;
-
-public record EqualExpression(Expression Left, Expression Right) : Expression;
-
-public record LessThanExpression(Expression Left, Expression Right) : Expression;
-
-public record LessThanEqualExpression(Expression Left, Expression Right) : Expression;
-
-public record AndExpression(Expression Left, Expression Right) : Expression;
-
-public record OrExpression(Expression Left, Expression Right) : Expression;
-
-public record NotExpression(Expression Left) : Expression;
-
-public record IncrementExpression(Expression Left) : Expression;
-
-public record DecrementExpression(Expression Left) : Expression;
+public record BinaryOperation(BinaryOperatorType Type, MyExpression Left, MyExpression Right) : MyExpression;
 
 public abstract record Statement : Node;
 
-public abstract record Assignment : Statement;
+public record ExpressionStatement(MyExpression Expression) : Statement;
+public record Assignment(Maybe<Kind> Kind, Identifier Identifier, MyExpression Value) : Statement;
 
-public record FullAssignmentStatement(Kind Kind, Identifier Identifier, Expression Value) : Assignment;
+public record IfStatement(MyExpression Condition, ImmutableArray<Statement> Statements) : Statement;
 
-public record HalfAssignment(Identifier Identifier, Expression Value) : Assignment;
+public record WhileStatement(MyExpression Condition, ImmutableArray<Statement> Statements) : Statement;
 
-public record FullAddAssignmentStatement(Kind Kind, Identifier Identifier, Expression Value) : Statement;
-
-public record HalfAddAssignmentStatement(Identifier Identifier, Expression Value) : Statement;
-
-public record FullSubtractAssignmentStatement(Kind Kind, Identifier Identifier, Expression Value) : Statement;
-
-public record HalfSubtractAssignmentStatement(Identifier Identifier, Expression Value) : Statement;
-
-public record FullMultiplyAssignmentStatement(Kind Kind, Identifier Identifier, Expression Value) : Statement;
-
-public record HalfMultiplyAssignmentStatement(Identifier Identifier, Expression Value) : Statement;
-
-public record FullDivideAssignmentStatement(Kind Kind, Identifier Identifier, Expression Value) : Statement;
-
-public record HalfDivideAssignmentStatement(Identifier Identifier, Expression Value) : Statement;
-
-public record IfStatement(Expression Condition, Statement[] Statements) : Statement;
-
-public record WhileStatement(Expression Condition, Statement[] Statements) : Statement;
-
-public record DoWhileStatement(Statement[] Statements, Expression Condition) : Statement;
+public record DoWhileStatement(ImmutableArray<Statement> Statements, MyExpression Condition) : Statement;
 
 public record ForStatement(
     Assignment InitialAssignment,
-    Expression Condition,
-    HalfAssignment StepAssignment) : Statement;
+    MyExpression Condition,
+    MyExpression StepAssignment,
+    ImmutableArray<Statement> Statements) : Statement;
 
-public record MyProgram(Statement[] StatementArray) : Node;
+public record JavaProgram(ImmutableArray<Statement> Statements) : Node;
+
+public static class JavaParser
+{
+    public static Parser<char, T> Tok<T>(Parser<char, T> token)
+        => Try(token).Before(SkipWhitespaces);
+
+    public static Parser<char, string> Tok(string token)
+        => Tok(String(token));
+
+    public static readonly Parser<char, Kind> Kind
+        = Tok(String("int"))
+            .Select<Kind>(name => new Kind(KindType.Integer))
+            .Labelled("integer kind");
+
+    public static Parser<char, T> Parenthesised<T>(Parser<char, T> parser)
+        => parser.Between(Tok("("), Tok(")"));
+
+    public static Parser<char, T> Braced<T>(Parser<char, T> parser)
+        => parser.Between(Tok("{"), Tok("}"));
+
+    public static Parser<char, Func<MyExpression, MyExpression, MyExpression>> Binary(
+        Parser<char, BinaryOperatorType> op)
+        => op.Select<Func<MyExpression, MyExpression, MyExpression>>(type => (l, r) => new BinaryOperation(type, l, r));
+
+    public static Parser<char, Func<MyExpression, MyExpression>> Unary(Parser<char, UnaryOperatorType> op)
+        => op.Select<Func<MyExpression, MyExpression>>(type => o => new UnaryOperation(type, o));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Add
+        = Binary(Tok("+").ThenReturn(BinaryOperatorType.Add));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Subtract
+        = Binary(Tok("-").ThenReturn(BinaryOperatorType.Subtract));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Multiply
+        = Binary(Tok("*").ThenReturn(BinaryOperatorType.Mulitply));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Divide
+        = Binary(Tok("/").ThenReturn(BinaryOperatorType.Divide));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Modulo
+        = Binary(Tok("%").ThenReturn(BinaryOperatorType.Modulo));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> And
+        = Binary(Tok("&&").ThenReturn(BinaryOperatorType.And));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Or
+        = Binary(Tok("||").ThenReturn(BinaryOperatorType.Or));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> GreaterThanEqual
+        = Binary(Tok(">=").ThenReturn(BinaryOperatorType.GreaterThanEqual));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> GreaterThan
+        = Binary(Tok(">").ThenReturn(BinaryOperatorType.GreaterThan));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> Equal
+        = Binary(Tok("==").ThenReturn(BinaryOperatorType.Equal));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> LessThan
+        = Binary(Tok("<").ThenReturn(BinaryOperatorType.LessThan));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression, MyExpression>> LessThanEqual
+        = Binary(Tok("<=").ThenReturn(BinaryOperatorType.LessThanEqual));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression>> Increment
+        = Unary(Tok("++").ThenReturn(UnaryOperatorType.Increment));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression>> Decrement
+        = Unary(Tok("--").ThenReturn(UnaryOperatorType.Decrement));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression>> Negate
+        = Unary(Tok("-").ThenReturn(UnaryOperatorType.Negate));
+
+    public static readonly Parser<char, Func<MyExpression, MyExpression>> Complement
+        = Unary(Tok("!").ThenReturn(UnaryOperatorType.Complement));
+
+
+    public static readonly Parser<char, MyExpression> Identifier
+        = Try(
+            Tok(Letter.Then(LetterOrDigit.ManyString(), (h, t) => h + t))
+                .Bind(identifier =>
+                {
+                    return identifier switch
+                    {
+                        "int" => Fail<MyExpression>(),
+                        "if" => Fail<MyExpression>(),
+                        "while" => Fail<MyExpression>(),
+                        "do" => Fail<MyExpression>(),
+                        "for" => Fail<MyExpression>(),
+                        _ => Return(identifier).Select<MyExpression>(name => new Identifier(name))
+                    };
+                })
+                .Labelled("identifier")
+        );
+
+    public static readonly Parser<char, MyExpression> Literal
+        = Tok(Num)
+            .Select<MyExpression>(value => new Literal(value))
+            .Labelled("integer literal");
+
+    public static Parser<char, Func<MyExpression, MyExpression>> Call(Parser<char, MyExpression> subExpr)
+        => Parenthesised(subExpr.Separated(Tok(",")))
+            .Select<Func<MyExpression, MyExpression>>(args => method => new Call(method, args.ToImmutableArray()))
+            .Labelled("function call");
+
+    public static readonly Parser<char, MyExpression> Expression = ExpressionParser.Build<char, MyExpression>(
+        expr => (
+            OneOf(
+                Identifier,
+                Literal,
+                Parenthesised(expr).Labelled("parenthesised expression")
+            ),
+            new[]
+            {
+                Operator.PostfixChainable(Call(expr)),
+                Operator.Postfix(Increment).And(Operator.Postfix(Decrement)),
+                Operator.Prefix(Negate).And(Operator.Prefix(Complement)),
+                Operator.InfixL(Multiply).And(Operator.InfixL(Divide)),
+                Operator.InfixL(Add).And(Operator.InfixL(Subtract)),
+                Operator.InfixL(Modulo),
+                Operator.InfixL(And),
+                Operator.InfixL(Or),
+                Operator.InfixL(GreaterThanEqual)
+                    .And(Operator.InfixL(GreaterThan))
+                    .And(Operator.InfixL(Equal))
+                    .And(Operator.InfixL(LessThan))
+                    .And(Operator.InfixL(LessThanEqual))
+            }
+        )
+    ).Labelled("expression");
+
+    public static Parser<char, Statement> Statement;
+
+    public static Parser<char, Statement> ExpressionStatement =
+        Expression.Before(Tok(";")).Select<Statement>(x => new ExpressionStatement(x));
+
+    public static Parser<char, Statement> Assignment = Map(
+            (kind, identifier, expression) =>
+                (Statement) new Assignment(kind, (Identifier) identifier, expression),
+            Kind.Optional(),
+            Identifier.Before(Tok("=")),
+            Expression.Before(Tok(";")))
+        .Labelled("assignment");
+
+    public static Parser<char, Statement> IfStatement = Map(
+            (_, expression, statements) =>
+                (Statement) new IfStatement(expression, statements.Select(x => (Statement) x).ToImmutableArray()),
+            Tok("if"),
+            Parenthesised(Expression),
+            Braced(Rec(() => Statement).Many()))
+        .Labelled("if statement");
+
+    public static Parser<char, Statement> WhileStatement = Map(
+            (_, expression, statements) =>
+                (Statement) new WhileStatement(expression, statements.Select(x => (Statement) x).ToImmutableArray()),
+            Tok("while"),
+            Parenthesised(Expression),
+            Braced(Rec(() => Statement).Many()))
+        .Labelled("while statement");
+
+    public static Parser<char, Statement> DoWhileStatement = Map(
+            (_, statements, expression) =>
+                (Statement) new DoWhileStatement(statements.Select(x => (Statement) x).ToImmutableArray(), expression),
+            Tok("do"),
+            Braced(Rec(() => Statement).Many()),
+            Parenthesised(Expression).Before(Tok(";"))
+        )
+        .Labelled("do while statement");
+
+    public static Parser<char, Statement> ForStatement = Map(
+        (_1, _2, init, cond, step, _3, ss) =>
+            (Statement) new ForStatement((Assignment) init, cond, step, ss.Select(x => (Statement) x).ToImmutableArray()),
+        Tok("for"),
+        Tok("("),
+        Assignment,
+        Expression,
+        Expression,
+        Tok(")"),
+        Braced(Rec(() => Statement).Many()));
+
+    public static Parser<char, JavaProgram> Program;
+    
+    static JavaParser()
+    {
+        Statement = OneOf(
+            ExpressionStatement,
+            Assignment,
+            IfStatement,
+            WhileStatement,
+            DoWhileStatement,
+            ForStatement);
+        
+        Program =
+            Statement.Many()
+                .Select(statements => 
+                    new JavaProgram(statements.Select(x => (Statement)x).ToImmutableArray()))
+                .Between(SkipWhitespaces, SkipWhitespaces);
+    }
+
+    public static JavaProgram ParseOrThrow(string input)
+        => Program.ParseOrThrow(input);
+}
 
 public class Program
 {
-    public static Parser<char, Node> IntegerKind;
-    public static Parser<char, Node> Kind;
-    public static Parser<char, Node> Identifier;
-    public static Parser<char, Node> IntegerLiteral;
-    public static Parser<char, Node> Expression;
-    public static Parser<char, Node> AddExpression;
-    public static Parser<char, Node> SubtractExpression;
-    public static Parser<char, Node> MultiplyExpression;
-    public static Parser<char, Node> DivideExpression;
-    public static Parser<char, Node> ModuloExpression;
-    public static Parser<char, Node> GreaterThanEqualExpression;
-    public static Parser<char, Node> GreaterThanExpression;
-    public static Parser<char, Node> EqualExpression;
-    public static Parser<char, Node> LessThanEqualExpression;
-    public static Parser<char, Node> LessThanExpression;
-    public static Parser<char, Node> AndExpression;
-    public static Parser<char, Node> OrExpression;
-    public static Parser<char, Node> IncrementExpression;
-    public static Parser<char, Node> NotExpression;
-    public static Parser<char, Node> DecrementExpression;
-    public static Parser<char, Node> BooleanExpression;
-    public static Parser<char, Node> ExpressionStatement;
-    public static Parser<char, Node> Statement;
-    public static Parser<char, Node> FullAssignmentStatement;
-    public static Parser<char, Node> HalfAssignmentStatement;
-    public static Parser<char, Node> FullAddAssignmentStatement;
-    public static Parser<char, Node> HalfAddAssignmentStatement;
-    public static Parser<char, Node> HalfSubtractAssignmentStatement;
-    public static Parser<char, Node> IfStatement;
-    public static Parser<char, Node> WhileStatement;
-    public static Parser<char, Node> DoWhileStatement;
-    public static Parser<char, Node> Parser;
-
-
-    static Program()
-    {
-        IntegerKind = String("int").Select<Node>(_ => new IntegerKind());
-
-        Kind = OneOf(IntegerKind);
-
-        Identifier = Map(
-                (first, rest) => first + rest,
-                Letter,
-                LetterOrDigit.ManyString())
-            .Select<Node>(name => new Identifier(name));
-
-        IntegerLiteral = Num.Select<Node>(i => new IntegerLiteral(i));
-
-        Expression = null;
-
-        Parser<char, Node> MakeBinaryExpressionParser(string op, Func<Expression, Expression, Node> factory)
-        {
-            return Map(
-                (left, _, right) => factory((Expression) left, (Expression) right),
-                Rec(() => Expression).Between(Whitespaces, Whitespaces),
-                String(op).Between(Whitespaces, Whitespaces),
-                Rec(() => Expression).Between(Whitespaces, Whitespaces));
-        }
-        AddExpression = MakeBinaryExpressionParser(
-            "+",
-            (left, right) => new AddExpression(left, right));
-
-        SubtractExpression = MakeBinaryExpressionParser(
-            "-",
-            (left, right) => new SubtractExpression(left, right));
-
-        MultiplyExpression = MakeBinaryExpressionParser(
-            "*",
-            (left, right) => new MultiplyExpression(left, right));
-
-        DivideExpression = MakeBinaryExpressionParser(
-            "/",
-            (left, right) => new DivideExpression(left, right));
-
-        ModuloExpression = MakeBinaryExpressionParser(
-            "%",
-            (left, right) => new ModuloExpression(left, right));
-
-        GreaterThanEqualExpression = MakeBinaryExpressionParser(
-            ">=",
-            (left, right) => new GreaterThanEqualExpression(left, right));
-
-        GreaterThanExpression = MakeBinaryExpressionParser(
-            ">",
-            (left, right) => new GreaterThanExpression(left, right));
-
-        EqualExpression = MakeBinaryExpressionParser(
-            "==",
-            (left, right) => new EqualExpression(left, right));
-
-        LessThanEqualExpression = MakeBinaryExpressionParser(
-            "<=",
-            (left, right) => new LessThanEqualExpression(left, right));
-
-        LessThanExpression = MakeBinaryExpressionParser(
-            "<",
-            (left, right) => new LessThanExpression(left, right));
-
-        AndExpression = MakeBinaryExpressionParser(
-            "&&",
-            (left, right) => new AndExpression(left, right));
-
-        OrExpression = MakeBinaryExpressionParser(
-            "||",
-            (left, right) => new OrExpression(left, right));
-
-
-        Parser<char, Node> MakeUnaryExpressionParser(string op, Func<Expression, Node> factory)
-        {
-            return String(op)
-                .Then(Rec(() => Expression).Between(Whitespaces, Whitespaces))
-                .Select(exp => factory((Expression) exp));
-        }
-
-        IncrementExpression = MakeUnaryExpressionParser(
-            "++",
-            left => new IncrementExpression(left));
-
-        NotExpression = MakeUnaryExpressionParser(
-            "!",
-            left => new NotExpression(left));
-
-        DecrementExpression = MakeUnaryExpressionParser(
-            "--",
-            left => new DecrementExpression(left));
-
-        BooleanExpression = OneOf(
-            Try(NotExpression),
-            Try(GreaterThanEqualExpression),
-            Try(GreaterThanExpression),
-            Try(LessThanEqualExpression),
-            Try(LessThanExpression),
-            Try(AndExpression),
-            Try(OrExpression), 
-            Try(EqualExpression));
-
-        Expression = OneOf(
-            IncrementExpression,
-            DecrementExpression,
-            BooleanExpression,
-            AddExpression,
-            SubtractExpression ,
-            MultiplyExpression,
-            DivideExpression,
-            ModuloExpression,
-            Try(Identifier));
-
-        
-
-        ExpressionStatement = Expression
-            .Between(Whitespaces, Whitespaces)
-            .Before(Char(';').Between(Whitespaces, Whitespaces));
-
-        Parser<char, Node> MakeFullAssignmentStatement(string token, Func<Kind, Identifier, Expression, Node> factory)
-        {
-            return Map(
-                    (k, i, _, e) => factory((Kind) k, (Identifier) i, (Expression) e),
-                    Kind.Between(Whitespaces, Whitespaces),
-                    Identifier.Between(Whitespaces, Whitespaces),
-                    String(token).Between(Whitespaces, Whitespaces),
-                    Expression.Between(Whitespaces, Whitespaces))
-                .Before(Char(';').Between(Whitespaces, Whitespaces));
-        }
-
-        Parser<char, Node> MakeHalfAssignmentStatement(string token, Func<Identifier, Expression, Node> factory)
-        {
-            return Map(
-                    (i, _, e) => (Node) new HalfAssignment((Identifier) i, (Expression) e),
-                    Identifier.Between(Whitespaces, Whitespaces),
-                    String(token).Between(Whitespaces, Whitespaces),
-                    Expression.Between(Whitespaces, Whitespaces))
-                .Before(Char(';').Between(Whitespaces, Whitespaces));
-        }
-
-        Statement = null;
-
-        FullAssignmentStatement = MakeFullAssignmentStatement(
-            "=",
-            (k, i, e) => new FullAssignmentStatement(k, i, e));
-
-        HalfAssignmentStatement = MakeHalfAssignmentStatement(
-            "=",
-            (i, e) => new HalfAssignment(i, e));
-
-        FullAddAssignmentStatement = MakeFullAssignmentStatement(
-            "+=",
-            (k, i, e) => new FullAssignmentStatement(k, i, e));
-
-        HalfAddAssignmentStatement = MakeHalfAssignmentStatement(
-            "+=",
-            (i, e) => new HalfAssignment(i, e));
-
-        HalfSubtractAssignmentStatement = MakeHalfAssignmentStatement(
-            "-=",
-            (i, e) => new HalfAssignment(i, e));
-
-        IfStatement = Map(
-            (_1, b, _2, xs) =>
-                (Node) new IfStatement((Expression) b, xs.Select(x => (Statement) x).ToArray()),
-            String("if").Between(Whitespaces, Whitespaces),
-            BooleanExpression.Between(Whitespaces, Whitespaces).Between(Char('('), Char(')')),
-            Whitespaces,
-            Rec(() => Statement).Between(Whitespaces, Whitespaces).Many().Between(Char('{'), Char('}')));
-
-        WhileStatement = Map(
-            (_1, b, xs) => (Node) new WhileStatement((Expression) b, xs.Select(x => (Statement) x).ToArray()),
-            String("while")
-                .Between(Whitespaces, Whitespaces),
-            BooleanExpression
-                .Between(Whitespaces, Whitespaces)
-                .Between(Char('('), Char(')')
-                    .Between(Whitespaces, Whitespaces)),
-            Rec(() => Statement)
-                .Between(Whitespaces, Whitespaces)
-                .Many()
-                .Between(Char('{'), Char('}')
-                    .Between(Whitespaces, Whitespaces)));
-
-        DoWhileStatement = Map(
-            (_1, xs, _2, b) => (Node) new DoWhileStatement(xs.Select(x => (Statement) x).ToArray(), (Expression) b),
-            String("do").Between(Whitespaces, Whitespaces),
-            Rec(() => Statement)
-                .Between(Whitespaces, Whitespaces)
-                .Many()
-                .Between(Char('{'), Char('}')
-                    .Between(Whitespaces, Whitespaces)),
-            String("while")
-                .Between(Whitespaces, Whitespaces),
-            BooleanExpression
-                .Between(Whitespaces, Whitespaces)
-                .Between(Char('('), Char(')')
-                    .Between(Whitespaces, Whitespaces)));
-
-        Statement = OneOf(
-            ExpressionStatement,
-            FullAssignmentStatement,
-            HalfAssignmentStatement,
-            FullAddAssignmentStatement,
-            HalfAddAssignmentStatement);
-
-        Parser = Statement
-            .Between(Whitespaces, Whitespaces)
-            .Many()
-            .Select(xs => (Node) new MyProgram(xs.Select(x => (Statement) x).ToArray()));
-    }
-
     public static void Main(string[] args)
     {
-        //TODO: Expressions do not support numbers. Example: "2 + 3" or "int a = 2" 
-        try
-        {
-            var node = BooleanExpression.ParseOrThrow("a >= b");
-            Console.WriteLine(node);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        
     }
 }

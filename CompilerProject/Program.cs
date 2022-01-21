@@ -4,7 +4,7 @@ using Pidgin.Expression;
 using static Pidgin.Parser;
 using static Pidgin.Parser<char>;
 
-namespace Ehsan;
+namespace CompilerProject;
 
 public abstract record Node;
 
@@ -275,6 +275,14 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        
+        try
+        {
+            var node = JavaParser.ParseOrThrow("if(a>b){int a = b;}");
+            Console.WriteLine(node);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 }

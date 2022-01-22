@@ -343,17 +343,27 @@ public static class JavaParser
 
 public class Program
 {
+    /**
+     * while(a > b) { int a = b;}
+     * for( int a = 0 ; a < 10 ; a++) { int a = b;}
+     * do { int a = b } while (a>b);
+     * if(a>b) { int b = c;}
+     * int a = b;
+     */
     public static void Main(string[] args)
     {
-        try
+
+        while (true)
         {
-            while (true)
+            Console.WriteLine("Enter phrase: ");
+            try
             {
                 var input = Console.ReadLine();
                 if (input == "exit")
                 {
                     break;
                 }
+
                 var node = JavaParser.ParseOrThrow(input);
 
                 foreach (var test in node.Statements)
@@ -361,10 +371,10 @@ public class Program
                     Console.WriteLine(test);
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
     }
 }

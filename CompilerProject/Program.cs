@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Text;
 using Pidgin;
 using Pidgin.Expression;
 using static Pidgin.Parser;
@@ -8,7 +9,13 @@ namespace CompilerProject;
 
 public abstract record Node;
 
-public abstract record MyExpression : Node;
+public abstract record MyExpression : Node
+{
+    public override string ToString()
+    {
+        return base.ToString();
+    }
+};
 
 public enum KindType
 {
@@ -17,9 +24,21 @@ public enum KindType
 
 public record Kind(KindType Type) : Node;
 
-public record Identifier(string Name) : MyExpression;
+public record Identifier(string Name) : MyExpression
+{
+    public override string ToString()
+    {
+        return "Identifier { Value = "+Name+" }";
+    }
+};
 
-public record Literal(int Value) : MyExpression;
+public record Literal(int Value) : MyExpression
+{
+    public override string ToString()
+    {
+        return "Literal { Value = "+Value+" }";
+    }
+};
 
 public record Call(MyExpression Expression, ImmutableArray<MyExpression> Arguments) : MyExpression;
 
@@ -54,19 +73,70 @@ public record BinaryOperation(BinaryOperatorType Type, MyExpression Left, MyExpr
 public abstract record Statement : Node;
 
 public record ExpressionStatement(MyExpression Expression) : Statement;
-public record Assignment(Maybe<Kind> Kind, Identifier Identifier, MyExpression Value) : Statement;
 
-public record IfStatement(MyExpression Condition, ImmutableArray<Statement> Statements) : Statement;
+public record Assignment(Maybe<Kind> Kind, Identifier Identifier, MyExpression Value) : Statement
+{
+    public override string ToString()
+    {
+        return "Assignment { Kind = "+ Kind.Value.Type+", Identifier = Identifier { Name = "+ Identifier.Name +" }, Value = Literal { Value = " + Value + " } }";
+    }
+};
 
-public record WhileStatement(MyExpression Condition, ImmutableArray<Statement> Statements) : Statement;
+public record IfStatement(MyExpression Condition, ImmutableArray<Statement> Statements) : Statement
+{
+    public override string ToString()
+    {
+        var statementsTostring = new StringBuilder();
+        foreach (var statement in Statements)
+        {
+            statementsTostring.Append(statement.ToString() + " ");
+        }
+        return Condition.ToString()  + statementsTostring ;
+    }
+};
 
-public record DoWhileStatement(ImmutableArray<Statement> Statements, MyExpression Condition) : Statement;
+public record WhileStatement(MyExpression Condition, ImmutableArray<Statement> Statements) : Statement
+{
+    public override string ToString()
+    {
+        var statementsTostring = new StringBuilder();
+        foreach (var statement in Statements)
+        {
+            statementsTostring.Append(statement.ToString() + " ");
+        }
+        return "WhileStatement { "+ Condition.ToString()  + statementsTostring + "}" ;
+    }
+};
+
+public record DoWhileStatement(ImmutableArray<Statement> Statements, MyExpression Condition) : Statement
+{
+    public override string ToString()
+    {
+        var statementsTostring = new StringBuilder();
+        foreach (var statement in Statements)
+        {
+            statementsTostring.Append(statement.ToString() + " ");
+        }
+        return "DoWhileStatement { " +   statementsTostring +Condition.ToString() + "}";
+    }
+};
 
 public record ForStatement(
     Assignment InitialAssignment,
     MyExpression Condition,
     MyExpression StepAssignment,
-    ImmutableArray<Statement> Statements) : Statement;
+    ImmutableArray<Statement> Statements) : Statement
+{
+    public override string ToString()
+    {
+        var statementsTostring = new StringBuilder();
+        foreach (var statement in Statements)
+        {
+            statementsTostring.Append(statement.ToString() + " ");
+        }
+        return "ForStatement { " +InitialAssignment.ToString() + Condition.ToString() + StepAssignment.ToString() + statementsTostring+ "}";
+    }
+};
 
 public record JavaProgram(ImmutableArray<Statement> Statements) : Node;
 
@@ -205,10 +275,10 @@ public static class JavaParser
         Expression.Before(Tok(";")).Select<Statement>(x => new ExpressionStatement(x));
 
     public static Parser<char, Statement> Assignment = Map(
-            (kind, identifier, expression) =>
-                (Statement) new Assignment(kind, (Identifier) identifier, expression),
-            Kind.Optional(),
-            Identifier.Before(Tok("=")),
+        (kind, identifier, expression) =>
+            (Statement) new Assignment(kind, (Identifier) identifier, expression),
+        Kind.Optional(),
+        Identifier.Before(Tok("=")),
             Expression.Before(Tok(";")))
         .Labelled("assignment");
 
@@ -232,7 +302,7 @@ public static class JavaParser
             (_, statements, expression) =>
                 (Statement) new DoWhileStatement(statements.Select(x => (Statement) x).ToImmutableArray(), expression),
             Tok("do"),
-            Braced(Rec(() => Statement).Many()),
+            Braced(Rec(() => Statement).Many()).Before(String("while").Between(Whitespaces,Whitespaces)),
             Parenthesised(Expression).Before(Tok(";"))
         )
         .Labelled("do while statement");
@@ -243,7 +313,7 @@ public static class JavaParser
         Tok("for"),
         Tok("("),
         Assignment,
-        Expression,
+        Expression.Between(Whitespaces,Whitespaces).Before(Char(';')).Between(Whitespaces,Whitespaces),
         Expression,
         Tok(")"),
         Braced(Rec(() => Statement).Many()));
@@ -277,8 +347,20 @@ public class Program
     {
         try
         {
-            var node = JavaParser.ParseOrThrow("if(a>b){int a = b;}");
-            Console.WriteLine(node);
+            while (true)
+            {
+                var input = Console.ReadLine();
+                if (input == "exit")
+                {
+                    break;
+                }
+                var node = JavaParser.ParseOrThrow(input);
+
+                foreach (var test in node.Statements)
+                {
+                    Console.WriteLine(test);
+                }
+            }
         }
         catch (Exception e)
         {

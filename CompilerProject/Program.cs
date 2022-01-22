@@ -91,7 +91,7 @@ public record IfStatement(MyExpression Condition, ImmutableArray<Statement> Stat
         {
             statementsTostring.Append(statement.ToString() + " ");
         }
-        return Condition.ToString()  + statementsTostring ;
+        return "IfStatement { " +  Condition.ToString()  + statementsTostring + " }" ;
     }
 };
 
@@ -104,7 +104,7 @@ public record WhileStatement(MyExpression Condition, ImmutableArray<Statement> S
         {
             statementsTostring.Append(statement.ToString() + " ");
         }
-        return "WhileStatement { "+ Condition.ToString()  + statementsTostring + "}" ;
+        return "WhileStatement { "+ Condition.ToString()  + statementsTostring + " }" ;
     }
 };
 
@@ -117,7 +117,7 @@ public record DoWhileStatement(ImmutableArray<Statement> Statements, MyExpressio
         {
             statementsTostring.Append(statement.ToString() + " ");
         }
-        return "DoWhileStatement { " +   statementsTostring +Condition.ToString() + "}";
+        return "DoWhileStatement { " +   statementsTostring +Condition.ToString() + " }";
     }
 };
 
@@ -134,7 +134,7 @@ public record ForStatement(
         {
             statementsTostring.Append(statement.ToString() + " ");
         }
-        return "ForStatement { " +InitialAssignment.ToString() + Condition.ToString() + StepAssignment.ToString() + statementsTostring+ "}";
+        return "ForStatement { " +InitialAssignment.ToString() + Condition.ToString() + StepAssignment.ToString() + statementsTostring+ " }";
     }
 };
 
